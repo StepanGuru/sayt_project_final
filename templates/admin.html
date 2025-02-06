@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Admin Dashboard</h2>
+<div id="map" style="width: 100%; height: 500px;"></div>
+<button onclick="startRoute()">Проложить маршрут</button>
+<script>
+    var myMap;
+    var markers = {{ markers | tojson }};
+    var routePoints = []; // Массив для хранения точек маршрута
+    var currentRoute; // Переменная для текущего маршрута
+
+    function initMap() {
+        myMap = new ymaps.Map("map", {
+            center: [55.75, 37.61],
+            zoom: 10
+        });
+
+        // Отображение существующих меток
+        markers.forEach(function(marker) {
+            var placemark = new ymaps.Placemark([marker.lat, marker.lon], {}, {preset: 'islands#redDotIcon'});
+            myMap.geoObjects.add(placemark);
+
+            placemark.events.add('click', function () {
+                fetch(`/delete_marker/${marker.id}`, {method: 'POST'}).then(() => myMap.geoObjects.remove(placemark));
+            });
+        });
+
+        // Обработка клика на карте для удаления маршрута
+        myMap.events.add('click', function (e) {
+            if (routePoints.length < 2) {
+                var coords = e.get('coords');
+                routePoints.push(coords);
+
+                // Добавляем временную метку для точки маршрута
+                myMap.geoObjects.add(new ymaps.Placemark(coords, {}, {preset: 'islands#blueDotIcon'}));
+
+                if (routePoints.length === 2) {
+                    // Если两点 установлены, прокладываем маршрут
+                    createRoute();
+                }
+            }
+        });
+    }
+
+    // Функция для начала прокладки маршрута
+    function startRoute() {
+        routePoints = []; // Очищаем массив точек
+        if (currentRoute) {
+            myMap.geoObjects.remove(currentRoute); // Удаляем предыдущий маршрут
+        }
+        alert("Нажмите на карту, чтобы выбрать две точки для маршрута.");
+    }
+
+    // Функция для создания маршрута
+    function createRoute() {
+        if (routePoints.length === 2) {
+            var multiRoute = new ymaps.multiRouter.MultiRoute({
+                referencePoints: routePoints,
+                params: {
+                    routingMode: 'auto' // Режим автопутешествия
+                }
+            }, {
+                boundsAutoApply: true
+            });
+
+            // Добавляем маршрут на карту
+            myMap.geoObjects.add(multiRoute);
+            currentRoute = multiRoute;
+
+            alert("Маршрут успешно проложен!");
+        } else {
+            alert("Выберите ровно две точки для маршрута.");
+        }
+    }
+
+    ymaps.ready(initMap);
+</script>
+{% endblock %}

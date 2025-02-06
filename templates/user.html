@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>User Dashboard</h2>
+<div id="map" style="width: 100%; height: 500px;"></div>
+<button onclick="addMarker()">Add Marker</button>
+<script>
+    var myMap;
+
+    function initMap() {
+        myMap = new ymaps.Map("map", {
+            center: [55.75, 37.61],
+            zoom: 10
+        });
+
+        myMap.events.add('click', function (e) {
+            var coords = e.get('coords');
+            fetch('/add_marker', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                body: `lat=${coords[0]}&lon=${coords[1]}`
+            }).then(() => {
+                myMap.geoObjects.add(new ymaps.Placemark(coords, {}, {preset: 'islands#blueDotIcon'}));
+            });
+        });
+    }
+
+    ymaps.ready(initMap);
+</script>
+{% endblock %}
